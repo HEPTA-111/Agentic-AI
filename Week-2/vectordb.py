@@ -1,7 +1,6 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
-
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma 
-
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -22,10 +21,8 @@ documents = [
     for i, text in enumerate(texts)
 ]
 
-# 3. CORRECTED: Use the 'Chroma' class (not 'chorma')
 vectordb = Chroma.from_documents( documents, embeddings )
 
-# 4. CORRECTED: Use the 'vectordb' variable (not 'vectorstore')
 results = vectordb.similarity_search_with_score("What is a RAG system?", k=2)
 
 for doc, score in results:
@@ -33,3 +30,30 @@ for doc, score in results:
     print(f"Text: {doc.page_content}")
     print(f"Metadata: {doc.metadata}")
     print("---")
+
+
+def process_document_file(file_path):
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500, 
+        chunk_overlap=50
+    )
+    chunks = splitter.split_text(text)
+
+
+    documents = [
+        Document(
+            page_content=chunk, 
+            metadata={"source": file_path, "chunk_id": i}
+        )
+        for i, chunk in enumerate(chunks)
+    ]
+
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    vectorstore = Chroma.from_documents(documents, embeddings)
+
+    return vectorstore
